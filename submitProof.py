@@ -2,6 +2,7 @@ import eth_account
 import random
 import string
 import json
+import binascii
 from pathlib import Path
 from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware  # Necessary for POA chains
@@ -155,7 +156,11 @@ def sign_challenge(challenge):
     encoded_msg = eth_account.messages.encode_defunct(text=challenge)
     eth_sig_obj = eth_account.Account.sign_message(encoded_msg, private_key=eth_sk)
 
-    return addr, eth_sig_obj.signature.hex()
+    sig_bytes = bytes(eth_sig_obj.signature)
+    sig_hex_no_prefix = binascii.hexlify(sig_bytes).decode('ascii')
+    sig_hex = '0x' + sig_hex_no_prefix
+    
+    return addr, sig_hex
 
 
 def send_signed_msg(proof, random_leaf):
