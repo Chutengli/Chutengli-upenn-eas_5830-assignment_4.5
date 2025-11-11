@@ -34,10 +34,8 @@ def merkle_assignment():
     addr, sig = sign_challenge(challenge)
 
     if sign_challenge_verify(challenge, addr, sig):
-        tx_hash = '0x'
-        # TODO, when you are ready to attempt to claim a prime (and pay gas fees),
-        #  complete this method and run your code with the following line un-commented
-        # tx_hash = send_signed_msg(proof, leaves[random_leaf_index])
+        tx_hash = send_signed_msg(proof, leaves[random_leaf_index])
+        print(f"Transaction submitted: {tx_hash}")
 
 
 def generate_primes(num_primes):
@@ -150,11 +148,11 @@ def sign_challenge(challenge):
     addr = acct.address
     eth_sk = acct.key
 
-    # TODO YOUR CODE HERE
     encoded_msg = eth_account.messages.encode_defunct(text=challenge)
     eth_sig_obj = eth_account.Account.sign_message(encoded_msg, private_key=eth_sk)
-    sig_hex = '0x' + bytes(eth_sig_obj.signature).hex()
-
+    
+    sig_hex = '0x' + eth_sig_obj.signature.hex()
+    
     return addr, sig_hex
 
 
