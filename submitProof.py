@@ -25,7 +25,8 @@ def merkle_assignment():
     tree = build_merkle(leaves)
 
     # Select a random leaf and create a proof for that leaf
-    random_leaf_index = 0 #TODO generate a random index from primes to claim (0 is already claimed)
+    # Pick a random index (avoiding 0 which is already claimed)
+    random_leaf_index = random.randint(1, len(primes) - 1)
     proof = prove_merkle(tree, random_leaf_index)
 
     # This is the same way the grader generates a challenge for sign_challenge()
@@ -46,8 +47,22 @@ def generate_primes(num_primes):
         returns list (with length n) of primes (as ints) in ascending order
     """
     primes_list = []
-
-    #TODO YOUR CODE HERE
+    
+    if num_primes == 0:
+        return primes_list
+    
+    num = 2
+    while len(primes_list) < num_primes:
+        is_prime = True
+        for prime in primes_list:
+            if prime * prime > num:
+                break
+            if num % prime == 0:
+                is_prime = False
+                break
+        if is_prime:
+            primes_list.append(num)
+        num += 1
 
     return primes_list
 
@@ -57,10 +72,13 @@ def convert_leaves(primes_list):
         Converts the leaves (primes_list) to bytes32 format
         returns list of primes where list entries are bytes32 encodings of primes_list entries
     """
+    leaves = []
+    for prime in primes_list:
 
-    # TODO YOUR CODE HERE
-
-    return []
+        prime_bytes = prime.to_bytes(32, 'big')
+        leaves.append(prime_bytes)
+    
+    return leaves
 
 
 def build_merkle(leaves):
@@ -70,10 +88,24 @@ def build_merkle(leaves):
         tree[1] is the parent hashes, and so on until tree[n] which is the root hash
         the root hash produced by the "hash_pair" helper function
     """
-
-    #TODO YOUR CODE HERE
-    tree = []
-
+    tree = [leaves]
+    
+    current_level = leaves
+    while len(current_level) > 1:
+        next_level = []
+        i = 0
+        while i < len(current_level):
+            if i + 1 < len(current_level):
+                parent = hash_pair(current_level[i], current_level[i + 1])
+                next_level.append(parent)
+                i += 2
+            else:
+                parent = hash_pair(current_level[i], current_level[i])
+                next_level.append(parent)
+                i += 1
+        tree.append(next_level)
+        current_level = next_level
+    
     return tree
 
 
@@ -85,8 +117,25 @@ def prove_merkle(merkle_tree, random_indx):
         returns a proof of inclusion as list of values
     """
     merkle_proof = []
-    # TODO YOUR CODE HERE
-
+    current_index = random_indx
+    current_level = 0
+    
+    while current_level < len(merkle_tree) - 1:
+        current_layer = merkle_tree[current_level]
+        
+        if current_index % 2 == 0:
+            sibling_index = current_index + 1
+        else:
+            sibling_index = current_index - 1
+        
+        if sibling_index < len(current_layer):
+            merkle_proof.append(current_layer[sibling_index])
+        else:
+            merkle_proof.append(current_layer[current_index])
+        
+        current_index = current_index // 2
+        current_level += 1
+    
     return merkle_proof
 
 
@@ -103,8 +152,8 @@ def sign_challenge(challenge):
     addr = acct.address
     eth_sk = acct.key
 
-    # TODO YOUR CODE HERE
-    eth_sig_obj = 'placeholder'
+    encoded_msg = eth_account.messages.encode_defunct(text=challenge)
+    eth_sig_obj = eth_account.Account.sign_message(encoded_msg, private_key=eth_sk)
 
     return addr, eth_sig_obj.signature.hex()
 
@@ -118,13 +167,27 @@ def send_signed_msg(proof, random_leaf):
     chain = 'bsc'
 
     acct = get_account()
-    address, abi = get_contract_info(chain)
+    contract_address, abi = get_contract_info(chain)
     w3 = connect_to(chain)
 
-    # TODO YOUR CODE HERE
-    tx_hash = 'placeholder'
-
-    return tx_hash
+    contract = w3.eth.contract(address=contract_address, abi=abi)
+    
+    nonce = w3.eth.get_transaction_count(acct.address)
+    
+    tx = contract.functions.submit(proof, random_leaf).build_transaction({
+        'chainId': 97,  # BSC testnet chain ID
+        'gas': 200000,
+        'gasPrice': w3.eth.gas_price,
+        'nonce': nonce,
+    })
+    
+    signed_tx = w3.eth.account.sign_transaction(tx, private_key=acct.key)
+    
+    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+    
+    return tx_hash.hex()
 
 
 # Helper functions that do not need to be modified
