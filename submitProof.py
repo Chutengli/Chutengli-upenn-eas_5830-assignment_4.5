@@ -153,8 +153,6 @@ def sign_challenge(challenge):
     cur_dir = Path(__file__).parent.absolute()
     with open(cur_dir.joinpath('sk.txt'), 'r') as f:
         private_key = f.readline().strip()
-    if private_key.startswith('0x'):
-        private_key = private_key[2:]
 
     encoded_msg = eth_account.messages.encode_defunct(text=challenge)
     signed_message = eth_account.Account.sign_message(encoded_msg, private_key=private_key)
