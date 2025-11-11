@@ -184,7 +184,7 @@ def send_signed_msg(proof, random_leaf):
         private_key = private_key.hex()
     
     signed_txn = eth_account.Account.sign_transaction(tx, private_key=private_key)
-    raw_tx = signed_txn.rawTransaction
+    raw_tx = signed_txn.raw_transaction
     raw_tx_bytes = bytes(raw_tx)
     
     tx_hash = w3.eth.send_raw_transaction(raw_tx_bytes)
