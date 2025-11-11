@@ -178,8 +178,16 @@ def send_signed_msg(proof, random_leaf):
         'nonce': nonce,
     })
     
-    signed_tx = w3.eth.account.sign_transaction(tx, private_key=acct.key)
-    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    # Sign transaction using eth_account
+    private_key = acct.key
+    if isinstance(private_key, bytes):
+        private_key = private_key.hex()
+    
+    signed_txn = eth_account.Account.sign_transaction(tx, private_key=private_key)
+    raw_tx = signed_txn.rawTransaction
+    raw_tx_bytes = bytes(raw_tx)
+    
+    tx_hash = w3.eth.send_raw_transaction(raw_tx_bytes)
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     
     return tx_hash.hex()
