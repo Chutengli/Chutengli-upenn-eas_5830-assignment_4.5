@@ -2,7 +2,6 @@ import eth_account
 import random
 import string
 import json
-import binascii
 from pathlib import Path
 from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware  # Necessary for POA chains
@@ -48,7 +47,7 @@ def generate_primes(num_primes):
         returns list (with length n) of primes (as ints) in ascending order
     """
     primes_list = []
-    
+
     if num_primes == 0:
         return primes_list
     
@@ -78,7 +77,7 @@ def convert_leaves(primes_list):
 
         prime_bytes = prime.to_bytes(32, 'big')
         leaves.append(prime_bytes)
-    
+
     return leaves
 
 
@@ -106,7 +105,7 @@ def build_merkle(leaves):
                 i += 1
         tree.append(next_level)
         current_level = next_level
-    
+
     return tree
 
 
@@ -136,7 +135,7 @@ def prove_merkle(merkle_tree, random_indx):
         
         current_index = current_index // 2
         current_level += 1
-    
+
     return merkle_proof
 
 
@@ -149,16 +148,12 @@ def sign_challenge(challenge):
         claimed a prime
     """
     acct = get_account()
-
     addr = acct.address
-    eth_sk = acct.key
 
     encoded_msg = eth_account.messages.encode_defunct(text=challenge)
-    eth_sig_obj = eth_account.Account.sign_message(encoded_msg, private_key=eth_sk)
+    signed_message = eth_account.Account.sign_message(encoded_msg, private_key=acct.key)
 
-    sig_bytes = bytes(eth_sig_obj.signature)
-    sig_hex_no_prefix = binascii.hexlify(sig_bytes).decode('ascii')
-    sig_hex = '0x' + sig_hex_no_prefix
+    sig_hex = '0x' + bytes(signed_message.signature).hex()
     
     return addr, sig_hex
 
