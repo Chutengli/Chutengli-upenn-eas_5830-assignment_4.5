@@ -25,7 +25,6 @@ def merkle_assignment():
     tree = build_merkle(leaves)
 
     # Select a random leaf and create a proof for that leaf
-    # Pick a random index (avoiding 0 which is already claimed)
     random_leaf_index = random.randint(1, len(primes) - 1)
     proof = prove_merkle(tree, random_leaf_index)
 
@@ -74,10 +73,9 @@ def convert_leaves(primes_list):
     """
     leaves = []
     for prime in primes_list:
-
         prime_bytes = prime.to_bytes(32, 'big')
         leaves.append(prime_bytes)
-
+    
     return leaves
 
 
@@ -105,7 +103,7 @@ def build_merkle(leaves):
                 i += 1
         tree.append(next_level)
         current_level = next_level
-
+    
     return tree
 
 
@@ -135,7 +133,7 @@ def prove_merkle(merkle_tree, random_indx):
         
         current_index = current_index // 2
         current_level += 1
-
+    
     return merkle_proof
 
 
@@ -148,13 +146,15 @@ def sign_challenge(challenge):
         claimed a prime
     """
     acct = get_account()
-    addr = acct.address
 
+    addr = acct.address
+    eth_sk = acct.key
+
+    # TODO YOUR CODE HERE
     encoded_msg = eth_account.messages.encode_defunct(text=challenge)
-    signed_message = eth_account.Account.sign_message(encoded_msg, private_key=acct.key)
-    
-    sig_hex = '0x' + signed_message.signature.hex()
-    
+    eth_sig_obj = eth_account.Account.sign_message(encoded_msg, private_key=eth_sk)
+    sig_hex = '0x' + bytes(eth_sig_obj.signature).hex()
+
     return addr, sig_hex
 
 
@@ -167,24 +167,21 @@ def send_signed_msg(proof, random_leaf):
     chain = 'bsc'
 
     acct = get_account()
-    contract_address, abi = get_contract_info(chain)
+    address, abi = get_contract_info(chain)
     w3 = connect_to(chain)
 
-    contract = w3.eth.contract(address=contract_address, abi=abi)
-    
+    contract = w3.eth.contract(address=address, abi=abi)
     nonce = w3.eth.get_transaction_count(acct.address)
     
     tx = contract.functions.submit(proof, random_leaf).build_transaction({
-        'chainId': 97,  # BSC testnet chain ID
+        'chainId': 97,
         'gas': 200000,
         'gasPrice': w3.eth.gas_price,
         'nonce': nonce,
     })
     
     signed_tx = w3.eth.account.sign_transaction(tx, private_key=acct.key)
-    
     tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-    
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     
     return tx_hash.hex()
