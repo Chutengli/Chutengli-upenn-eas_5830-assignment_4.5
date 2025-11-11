@@ -150,10 +150,15 @@ def sign_challenge(challenge):
     acct = get_account()
     addr = acct.address
 
-    encoded_msg = eth_account.messages.encode_defunct(text=challenge)
-    signed_message = eth_account.Account.sign_message(encoded_msg, private_key=acct.key)
+    cur_dir = Path(__file__).parent.absolute()
+    with open(cur_dir.joinpath('sk.txt'), 'r') as f:
+        private_key = f.readline().strip()
+    if private_key.startswith('0x'):
+        private_key = private_key[2:]
 
-    sig_hex = '0x' + bytes(signed_message.signature).hex()
+    encoded_msg = eth_account.messages.encode_defunct(text=challenge)
+    signed_message = eth_account.Account.sign_message(encoded_msg, private_key=private_key)
+    sig_hex = '0x' + signed_message.signature.hex()
     
     return addr, sig_hex
 
